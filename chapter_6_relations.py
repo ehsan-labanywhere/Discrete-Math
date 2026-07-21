@@ -1,0 +1,784 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+import graphviz
+from collections import deque
+
+# ==========================================
+# 1. Page configuration and styling (original visual design preserved)
+# ==========================================
+st.set_page_config(page_title="Ch 6: Relations & Graphs", layout="wide")
+
+st.markdown("""
+<style>
+    .math-tag { background-color: #e3f2fd; color: #0d47a1; padding: 4px 8px; border-radius: 5px; font-weight: bold; }
+    .db-tag { background-color: #fce4ec; color: #880e4f; padding: 4px 8px; border-radius: 5px; font-weight: bold; }
+    .highlight-box { background-color: #f0f2f6; border-left: 5px solid #4caf50; padding: 15px; margin: 10px 0; border-radius: 5px; }
+    h3 { color: #1f77b4; }
+    .stButton>button { width: 100%; }
+</style>
+""", unsafe_allow_html=True)
+
+# ==========================================
+# 2. Core algorithm utilities (backend logic)
+# ==========================================
+
+def parse_set_input(input_str):
+    """Parse the input, remove duplicates, and sort the values."""
+    try: return sorted(list(set([int(x.strip()) for x in input_str.split(',') if x.strip()])))
+    except: return [1, 2, 3, 4]
+
+def format_set_display(s):
+    return "{" + ", ".join(map(str, s)) + "}"
+
+def format_relation_display(rel):
+    if not rel: return "{}"
+    items = ", ".join([f"({a},{b})" for a, b in rel])
+    return f"\\{{ {items} \\}}"
+
+def display_relation_smart(rel, label, prefix=None, max_latex=25):
+    """
+    Display the relation intelligently:
+    - If the size is at most max_latex, show it in LaTeX math notation
+    - Otherwise, switch to a table automatically to keep the page readable
+    """
+    st.markdown(f"#### {label}")
+
+    if len(rel) == 0:
+        if prefix: st.latex(prefix + r"\ \{\}")
+        else: st.latex(r"\{\}")
+        return
+
+    if len(rel) <= max_latex:
+        expr = format_relation_display(rel)
+        if prefix: st.latex(prefix + r"\ " + expr)
+        else: st.latex(expr)
+        st.caption(f"Displayed as math notation ({len(rel)} pairs).")
+    else:
+        # Create a clean DataFrame for large relations
+        df = pd.DataFrame(rel, columns=["a", "b"])
+        df.index += 1
+        st.dataframe(df, use_container_width=True)
+        st.caption(f"Displayed as a table because there are {len(rel)} pairs.")
+
+def generate_relation_data(set_a, set_b, rule):
+    relation = []
+    for a in set_a:
+        for b in set_b:
+            is_related = False
+            if rule == "Less Than (a < b)": is_related = (a < b)
+            elif rule == "Greater Than (a > b)": is_related = (a > b)
+            elif rule == "Equal (a = b)": is_related = (a == b)
+            elif rule == "Divides (a | b)": is_related = (a != 0 and b % a == 0)
+            elif rule == "Same Parity (a % 2 == b % 2)": is_related = (a % 2 == b % 2)
+            elif rule == "Immediate Predecessor (a = b - 1)": is_related = (a == b - 1)
+            
+            if is_related: relation.append((a, b))
+    return relation
+
+def check_properties(A, R_list):
+    R_set = set(R_list)
+    props = {}
+    props['Reflexive'] = all((a,a) in R_set for a in A)
+    props['Symmetric'] = all((b,a) in R_set for (a,b) in R_list)
+    
+    props['Anti-symmetric'] = True
+    for (a,b) in R_list:
+        if a != b and (b,a) in R_set: props['Anti-symmetric'] = False; break
+        
+    props['Transitive'] = True
+    for (a,b) in R_list:
+        for (c,d) in R_list:
+            if b == c and (a,d) not in R_set: props['Transitive'] = False; break
+        if not props['Transitive']: break
+    return props
+
+def get_matrix(nodes, edges):
+    size = len(nodes)
+    matrix = np.zeros((size, size), dtype=int)
+    idx_map = {val: i for i, val in enumerate(nodes)}
+    for u, v in edges:
+        if u in idx_map and v in idx_map:
+            matrix[idx_map[u]][idx_map[v]] = 1
+    return matrix, idx_map
+
+def boolean_matmul(A, B):
+    """Boolean matrix multiplication using OR over AND."""
+    A_b = (A > 0)
+    B_b = (B > 0)
+    return ((A_b.astype(int) @ B_b.astype(int)) > 0).astype(int)
+
+
+def matrix_power(matrix, k):
+    base = (matrix > 0).astype(int)
+    if k <= 1:
+        return base
+    res = base.copy()
+    for _ in range(k - 1):
+        res = boolean_matmul(res, base)
+    return res
+
+
+def compute_transitive_closure(matrix):
+    n = len(matrix)
+    base = (matrix > 0).astype(int)
+    closure = base.copy()
+    power_k = base.copy()
+    for _ in range(1, n):
+        power_k = boolean_matmul(power_k, base)
+        closure = np.logical_or(closure, power_k).astype(int)
+    return closure
+
+def topological_sort(nodes, edges):
+    in_degree = {node: 0 for node in nodes}
+    for u, v in edges:
+        if v in in_degree: in_degree[v] += 1
+    queue = deque([n for n in nodes if in_degree[n] == 0])
+    sorted_list = []
+    while queue:
+        u = queue.popleft()
+        sorted_list.append(u)
+        for src, dest in edges:
+            if src == u and dest in in_degree:
+                in_degree[dest] -= 1
+                if in_degree[dest] == 0: queue.append(dest)
+    if len(sorted_list) != len(nodes): return None 
+    return sorted_list
+
+def compose_relations(R, S):
+    R_set, S_set = set(R), set(S)
+    result = set()
+    R_out = {}
+    for (a, b) in R_set: R_out.setdefault(a, set()).add(b)
+    S_out = {}
+    for (b, c) in S_set: S_out.setdefault(b, set()).add(c)
+    for a, bs in R_out.items():
+        for b in bs:
+            for c in S_out.get(b, set()): result.add((a, c))
+    return sorted(list(result))
+
+def witness_middle_nodes(a, c, R, S):
+    R_out = {}
+    for (x, y) in R: R_out.setdefault(x, set()).add(y)
+    S_in = {}
+    for (y, z) in S: S_in.setdefault(z, set()).add(y)
+    bs_from_R = R_out.get(a, set())
+    bs_to_c_in_S = S_in.get(c, set())
+    return sorted(list(bs_from_R.intersection(bs_to_c_in_S)))
+
+
+def find_witness_path(nodes, edges, start, end):
+    """Return one witness path start -> ... -> end if reachable, else []."""
+    adj = {n: [] for n in nodes}
+    for u, v in edges:
+        if u in adj:
+            adj[u].append(v)
+
+    q = deque([start])
+    prev = {start: None}
+    while q:
+        cur = q.popleft()
+        if cur == end:
+            break
+        for nxt in adj.get(cur, []):
+            if nxt not in prev:
+                prev[nxt] = cur
+                q.append(nxt)
+
+    if end not in prev:
+        return []
+
+    path = []
+    cur = end
+    while cur is not None:
+        path.append(cur)
+        cur = prev[cur]
+    return list(reversed(path))
+
+# ==========================================
+# 3. Module rendering functions
+# ==========================================
+
+def render_overview():
+    st.header("Chapter 6: Relations as Computational Structures")
+    st.markdown("""
+    ### From Textbook to Interactive Tool
+    Based on our meetings, this app transforms static math concepts into an **active CS playground** connecting 4 key areas:
+    
+    1.  **Sets ↔ SQL (The Bridge)**: 
+        * *Concept*: Relations are just **Database Tables**.
+        * *Sections*: 6.1, 6.2, 6.10.
+    2.  **Modeling (Visuals)**: 
+        * *Concept*: Representing connections ($V \\times V$) using **Digraphs** and **Adjacency Matrices**.
+        * *Sections*: 6.3, 6.6.
+    3.  **Operations (Logic)**: 
+        * *Concept*: How `Composition` and Matrix Multiplication explain **"Friends of Friends"**.
+        * *Sections*: 6.4, 6.5.
+    4.  **Applications (Real-world)**: 
+        * *Concept*: **Task Scheduling** (Topological Sort with Cycle Detection) and **Data Clustering**.
+        * *Sections*: 6.7 - 6.9.
+    """)
+    st.info("👈 Select a module from the tabs above to start experimenting.")
+
+
+# --- Tab 1: Basics ---
+def render_basics():
+    st.subheader("1. The Bridge: Sets ↔ Tables")
+    st.markdown("Focus: **Ordered Pairs** notation & **SQL Table** representation.")
+    
+    with st.expander("🛠️ Define Relation (Set A & Set B)", expanded=True):
+        c1, c2, c3 = st.columns([1,1,2])
+        A = parse_set_input(c1.text_input("Set A elements (e.g. 1, 2, 3)", "1, 2, 3, 4"))
+        B = parse_set_input(c2.text_input("Set B elements (e.g. 1, 2, 3)", "1, 2, 3, 4"))
+        
+        rule = c3.selectbox("Relation Rule", [
+            "Divides (a | b)", "Less Than (a < b)", 
+            "Greater Than (a > b)", "Equal (a = b)", 
+            "Same Parity (a % 2 == b % 2)", "Immediate Predecessor (a = b - 1)"
+        ])
+    
+    if A and B:
+        rel = generate_relation_data(A, B, rule)
+        c_math, c_mid, c_db = st.columns([4, 1, 5])
+        with c_math:
+            st.markdown("#### 📐 Math Notation")
+            st.latex(f"A = {format_set_display(A)}")
+            st.latex(f"B = {format_set_display(B)}")
+            st.markdown("**R (Ordered Pairs):**")
+            st.latex(f"R = {format_relation_display(rel)}")
+        with c_db:
+            st.markdown("#### 💾 Database Table")
+            df = pd.DataFrame(rel, columns=["Attribute_A", "Attribute_B"]); df.index += 1
+            st.dataframe(df, use_container_width=True)
+            st.markdown("""<div class='highlight-box'>Math <span class='math-tag'>Ordered Pair (a,b)</span> = DB <span class='db-tag'>Tuple (Row)</span></div>""", unsafe_allow_html=True)
+            st.markdown("### 🧪 Quick Check")
+            q1 = st.radio(
+                "In relation matrix M, what does M[i,j]=1 mean? (row node = v_i, column node = v_j)",
+                ["There is a direct relation from v_i to v_j", "v_i equals v_j", "v_j must be larger than v_i"],
+                key="qc_basics_1"
+            )
+            if st.button("Check", key="check_qc_basics_1"):
+                if q1 == "There is a direct relation from v_i to v_j":
+                    st.success("Correct. M[i,j]=1 encodes that ordered pair (v_i, v_j) is in R.")
+                else:
+                    st.error("Not quite. M[i,j]=1 means (v_i, v_j) belongs to relation R.")
+
+# --- Tab 2: Modeling (Smart Display Applied) ---
+def render_modeling():
+    st.subheader("2. Modeling: Properties, Graphs & Matrices")
+    
+    with st.expander("🕸️ Define Graph Nodes (Set V)", expanded=True):
+        c1, c2 = st.columns([1, 2])
+        nodes = parse_set_input(c1.text_input("Nodes V (e.g. 1, 2, 3, 4)", "1, 2, 3, 4"))
+        rule = c2.selectbox("Relation Rule on $V\\times V$", [
+            "Immediate Predecessor (a = b - 1)", "Divides (a | b)", 
+            "Less Than (a < b)", "Greater Than (a > b)", 
+            "Equal (a = b)", "Same Parity (a % 2 == b % 2)"
+        ])
+        if rule == "Immediate Predecessor (a = b - 1)":
+            st.info("💡 **Tip:** This relation is **NOT Transitive**. Check the 'Transitive Closure Lab' tab to see edges grow!")
+    
+    edges = generate_relation_data(nodes, nodes, rule)
+    matrix, _ = get_matrix(nodes, edges)
+    props = check_properties(nodes, edges)
+
+    tab_rep, tab_tc = st.tabs(["📊 Representations & Properties", "🧪 Transitive Closure Lab ($M^k \\to M^+$)"])
+
+    with tab_rep:
+        st.markdown("### 🔍 Analysis: Properties")
+        p1, p2, p3, p4 = st.columns(4)
+        p1.metric("Reflexive", "Yes" if props['Reflexive'] else "No")
+        p2.metric("Symmetric", "Yes" if props['Symmetric'] else "No")
+        p3.metric("Anti-symmetric", "Yes" if props['Anti-symmetric'] else "No")
+        p4.metric("Transitive", "Yes" if props['Transitive'] else "No")
+        
+        # --- SMART DISPLAY FOR BASE RELATION ---
+        st.divider()
+        display_relation_smart(
+            edges, 
+            "Relation $R\\subseteq V\\times V$ (ordered pairs)", 
+            prefix=r"R =", 
+            max_latex=25
+        )
+
+        st.divider()
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("#### 🕸️ Directed Graph")
+            try:
+                g = graphviz.Digraph(format='png'); g.attr(rankdir='LR')
+                for n in nodes: g.node(str(n))
+                for u, v in edges: g.edge(str(u), str(v))
+                st.graphviz_chart(g)
+            except: st.error("Graphviz not installed.")
+        with col2:
+            st.markdown("#### 🔢 Adjacency Matrix")
+            df_mat = pd.DataFrame(matrix, columns=nodes, index=nodes)
+            st.dataframe(df_mat.style.highlight_max(axis=None, color="#d1e7dd"), use_container_width=True)
+            # Pedagogical mapping note
+            st.caption("Matrix entry M[i,j] = 1 exactly when (v_i, v_j) is in R.")
+
+    with tab_tc:
+        st.markdown("### 🧬 Transitive Closure Explorer")
+        st.markdown("Use this lab to compare **exactly k-step reachability** ($M^k$) vs **overall reachability** ($M^+$).")
+        with st.expander("📘 Theory Notes"):
+            st.markdown("**1) Relation and matrix definitions**")
+            st.latex(r"R \subseteq V \times V")
+            st.latex(r"(M_R)_{ij}=1 \iff (v_i,v_j)\in R")
+            st.caption("Interpretation: matrix entry (i,j)=1 means there is a direct relation from node v_i to node v_j.")
+
+            st.markdown("**2) Boolean product and powers**")
+            st.latex(r"(A\odot B)_{ij}=\bigvee_k\,(A_{ik}\wedge B_{kj})")
+            st.latex(r"(M_R)^k\text{ represents reachability by exactly }k\text{ steps}")
+            st.caption("So if ((M_R)^k)_{ij}=1, then v_j is reachable from v_i using exactly k edges.")
+
+            st.markdown("**3) Transitive closure**")
+            st.latex(r"M_R^+=M_R\vee(M_R)^2\vee\cdots\vee(M_R)^{n},\ \ |V|=n")
+            st.caption("Strict matrix form (covers self-reachability via cycles): include powers through n. Implementation follows this convention.")
+
+            st.markdown("**4) Why this lab matters**")
+            st.caption("This connects relations, digraphs, and matrix operations into one computational view used in CS (reachability, dependency analysis, routing).")
+
+        example_mode = st.radio(
+            "Choose example",
+            ["Current Rule on V", "Predecessor Relation", "Flights Between Cities"],
+            horizontal=True
+        )
+
+        base_nodes = nodes
+        base_edges = edges
+
+        if example_mode == "Current Rule on V" and len(base_nodes) > 15:
+            st.warning("⚠️ Large V detected. For smooth in-class demos, we recommend n ≤ 15 in the closure lab.")
+            st.caption("Reason: closure and stabilization use repeated boolean matrix multiplications; capping V keeps demos responsive.")
+            soft_cap = st.checkbox("Use soft cap for closure demo (first 15 nodes)", value=True, key="tc_soft_cap")
+            if soft_cap:
+                base_nodes = base_nodes[:15]
+                base_edges = [(u, v) for (u, v) in base_edges if u in base_nodes and v in base_nodes]
+                st.caption(f"Using first {len(base_nodes)} nodes for Transitive Closure Explorer.")
+
+        if example_mode == "Predecessor Relation":
+            n_pred = st.slider("Set size n (A={1..n})", 3, 12, min(8, max(3, len(nodes))))
+            base_nodes = list(range(1, n_pred + 1))
+            base_edges = [(a, b) for a in base_nodes for b in base_nodes if a == b - 1]
+            st.caption("$R^k$ corresponds to distance-$k$ reachability; on $\{1..n\}$, $a$ reaches $b$ in $k$ steps iff $a=b-k$.")
+
+        elif example_mode == "Flights Between Cities":
+            city_pool = ["Detroit", "Chicago", "New York", "Boston", "Seattle", "Austin", "Denver", "Miami"]
+            city_count = st.slider("Number of cities", 5, 8, 6)
+            base_nodes = city_pool[:city_count]
+            default_flights = {
+                "Detroit→Chicago": ("Detroit", "Chicago"),
+                "Chicago→New York": ("Chicago", "New York"),
+                "New York→Boston": ("New York", "Boston"),
+                "Detroit→Austin": ("Detroit", "Austin"),
+                "Austin→Denver": ("Austin", "Denver"),
+                "Denver→Seattle": ("Denver", "Seattle"),
+                "Miami→Boston": ("Miami", "Boston"),
+            }
+            chosen = st.multiselect(
+                "Direct flights (relation R)",
+                list(default_flights.keys()),
+                default=[k for k in list(default_flights.keys())[:min(5, len(default_flights))]],
+            )
+            base_edges = [default_flights[k] for k in chosen if default_flights[k][0] in base_nodes and default_flights[k][1] in base_nodes]
+            st.caption("For this example, $R^2$ means reachable in 2 flights, and $M_R^+$ means reachable in any finite number of flights.")
+
+        base_matrix, _ = get_matrix(base_nodes, base_edges)
+        if len(base_nodes) < 2:
+            st.info("Please provide at least 2 nodes.")
+            return
+
+        display_relation_smart(base_edges, "Base Relation R", prefix=r"R =", max_latex=25)
+
+        with st.expander("🕸️ Show graph for this closure example"):
+            try:
+                g_tc = graphviz.Digraph(format='png')
+                g_tc.attr(rankdir='LR')
+                for n in base_nodes:
+                    g_tc.node(str(n))
+                for u, v in base_edges:
+                    g_tc.edge(str(u), str(v))
+                st.graphviz_chart(g_tc)
+                st.caption("Use this graph to visually match edges with 1s in $M$, $M^k$, and $M^+$." )
+            except Exception:
+                st.info("Graph view unavailable in this environment.")
+
+        show_steps = st.checkbox("Show steps (M¹, M², ..., up to n-1)", value=False)
+        highlight_ones = st.checkbox("Highlight 1s", value=False, key="hl_ones_tc")
+        k = st.slider("Power k (show $M^k$)", 1, max(1, len(base_nodes) - 1), 1)
+
+        base_bool = (base_matrix > 0).astype(int)
+        mk = matrix_power(base_bool, k)
+        m_plus = compute_transitive_closure(base_bool)
+
+        def render_bin_df(arr):
+            df = pd.DataFrame(arr, index=base_nodes, columns=base_nodes)
+            if highlight_ones:
+                sty = df.style.applymap(lambda v: "background-color:#d1e7dd; font-weight:600" if int(v)==1 else "")
+                st.dataframe(sty, use_container_width=True)
+            else:
+                st.dataframe(df, use_container_width=True)
+
+        col_mk, col_plus = st.columns(2)
+        with col_mk:
+            st.markdown(f"#### $M^{{{k}}}$ (exactly {k} steps)")
+            render_bin_df(mk)
+        with col_plus:
+            st.markdown("#### $M^+$ (transitive closure)")
+            render_bin_df(m_plus)
+
+        if show_steps:
+            st.markdown("#### Step-by-step powers")
+            cur = base_bool.copy()
+            for i in range(1, len(base_nodes)):
+                if i > 1:
+                    cur = boolean_matmul(cur, base_bool)
+                st.markdown(f"$M^{{{i}}}$")
+                render_bin_df(cur)
+
+        st.markdown("### 🎯 Try-it Prompts")
+        p0, p1, p2, p3 = st.columns([1.4, 1, 1, 2])
+        predict_target = p0.radio("Predict using", ["$M^k$", "$M^+$"], horizontal=True, key="pred_target_tc")
+        s_node = p1.selectbox("Start", base_nodes, key="s_node_tc")
+        e_node = p2.selectbox("End", base_nodes, index=min(1, len(base_nodes)-1), key="e_node_tc")
+        guess = p3.radio("Prediction", ["Reachable", "Not reachable"], horizontal=True, key="guess_tc")
+
+        idx_s, idx_e = base_nodes.index(s_node), base_nodes.index(e_node)
+        reachable_mk = (mk[idx_s][idx_e] == 1)
+        reachable_mplus = (m_plus[idx_s][idx_e] == 1)
+        reachable = reachable_mk if predict_target == "$M^k$" else reachable_mplus
+
+        if st.button("Check Prediction", key="check_pred_tc"):
+            ok = (reachable and guess == "Reachable") or ((not reachable) and guess == "Not reachable")
+            st.success("✅ Correct." if ok else "❌ Not this time.")
+            if predict_target == "$M^k$":
+                st.caption(f"Checked on $M^{{{k}}}$ (exactly {k} steps).")
+            else:
+                st.caption("Checked on $M^+$ (reachability by any finite number of steps).")
+
+            if predict_target == "$M^+$" and reachable:
+                path = find_witness_path(base_nodes, base_edges, s_node, e_node)
+                if path:
+                    st.caption("Witness path: " + " → ".join(map(str, path)))
+
+        closure_prev = np.zeros_like(base_bool)
+        closure_cur = np.zeros_like(base_bool)
+        stabilize_at = len(base_nodes)
+        pow_iter = base_bool.copy()  # M^1, then iteratively to M^2, M^3, ...
+        for i in range(1, len(base_nodes) + 1):
+            mk_i = pow_iter
+            closure_cur = np.logical_or(closure_prev, mk_i).astype(int)
+            if np.array_equal(closure_cur, closure_prev):
+                stabilize_at = i
+                break
+            closure_prev = closure_cur.copy()
+            pow_iter = boolean_matmul(pow_iter, base_bool)
+
+        guess_step = st.slider("Guess when closure $C_k$ stabilizes", 1, len(base_nodes), 2, key="guess_stable")
+        st.caption("Definition used here: stabilization starts at the first k such that $C_k = C_{k-1}$ (no new reachable pairs are added at step k).")
+        if st.button("Check Stabilization", key="check_stable"):
+            if guess_step == stabilize_at:
+                st.success(f"✅ Correct, closure stabilization starts at k={stabilize_at}.")
+            else:
+                st.info(f"Close. For this graph, closure stabilization starts at k={stabilize_at}.")
+
+        st.markdown("#### Add one extra edge and compare closure")
+        a_col, b_col = st.columns(2)
+        add_u = a_col.selectbox("From", base_nodes, key="add_u")
+        add_v = b_col.selectbox("To", base_nodes, key="add_v")
+        if st.button("Apply extra edge", key="apply_extra"):
+            new_edges = list(set(base_edges + [(add_u, add_v)]))
+            new_m, _ = get_matrix(base_nodes, new_edges)
+            new_plus = compute_transitive_closure(new_m)
+            diff = ((new_plus == 1) & (m_plus == 0)).astype(int)
+            render_bin_df(diff)
+            st.caption("Cells with 1 are newly reachable pairs after adding the edge.")
+
+# --- Tab 3: Operations (Smart Display Applied) ---
+def render_operations():
+    st.subheader("3. Operations: SQL & Logic")
+    tab1, tab2 = st.tabs(["N-ary Relations (Databases)", "Composition (Logic)"])
+    
+    with tab1:
+        st.markdown("**6.10 N-ary Relations**")
+        df = pd.DataFrame({
+            "Flight": [101, 102, 201, 303], "Dep": ["Detroit", "Detroit", "Chicago", "New York"],
+            "Arr": ["Chicago", "New York", "Detroit", "Miami"], "Time": ["08:00", "14:00", "09:30", "12:00"]
+        }); df.index += 1
+        st.dataframe(df)
+        c1, c2 = st.columns(2)
+        with c1:
+            val = st.selectbox("Select Departure:", ["Detroit", "Chicago", "New York"])
+            st.code(f"SELECT * FROM Flights WHERE Dep = '{val}'")
+            st.dataframe(df[df["Dep"] == val])
+        with c2:
+            cols = st.multiselect("Columns:", df.columns, ["Flight", "Dep"])
+            if cols: st.code(f"SELECT {', '.join(cols)} FROM Flights"); st.dataframe(df[cols])
+
+        st.markdown("### 🧪 Quick Check")
+        q_nary = st.radio(
+            "In this table, which statement is correct?",
+            [
+                "Each row is one tuple in an N-ary relation",
+                "Each column is one tuple",
+                "Only 2-column tables are relations"
+            ],
+            key="qc_nary"
+        )
+        if st.button("Check", key="check_qc_nary"):
+            if q_nary == "Each row is one tuple in an N-ary relation":
+                st.success("Correct. A relation instance is represented by tuples (rows).")
+            else:
+                st.error("Not correct. In relational modeling, rows are tuples.")
+
+    with tab2:
+        st.subheader("6.4 Composition: Friends of Friends")
+        st.markdown("**Idea:** Composition creates new connections through an intermediate node.")
+        st.latex(r"xRy \land ySz \Rightarrow x(S \circ R)z")
+        st.latex(r"(x,z)\in(S\circ R)\iff \exists y\,(xRy \land ySz)")
+        st.caption("Matrix connection: adjacency matrices satisfy $M(S\circ R)=M(R)\cdot M(S)$ (booleanized).")
+
+        with st.expander("🧩 Choose V, R, and S", expanded=True):
+            c1, c2, c3 = st.columns([1, 1, 1])
+            V = parse_set_input(c1.text_input("Nodes V (e.g. 1,2,3,4)", "1, 2, 3, 4", key="comp_v"))
+            rule_R = c2.selectbox("Rule for R", [
+                "Immediate Predecessor (a = b - 1)", "Divides (a | b)", "Less Than (a < b)", 
+                "Greater Than (a > b)", "Equal (a = b)", "Same Parity (a % 2 == b % 2)"
+            ], key="comp_rule_R")
+            rule_S = c3.selectbox("Rule for S", [
+                "Immediate Predecessor (a = b - 1)", "Divides (a | b)", "Less Than (a < b)", 
+                "Greater Than (a > b)", "Equal (a = b)", "Same Parity (a % 2 == b % 2)"
+            ], key="comp_rule_S")
+
+        if len(V) < 2:
+            st.info("Please enter at least 2 vertices to see composition.")
+        else:
+            R = generate_relation_data(V, V, rule_R)
+            S = generate_relation_data(V, V, rule_S)
+            SoR = compose_relations(R, S)
+            M_R, _ = get_matrix(V, R)
+            M_S, _ = get_matrix(V, S)
+            M_SoR_from_mats = boolean_matmul(M_R, M_S)
+            M_SoR_rel, _ = get_matrix(V, SoR)
+
+            st.divider()
+            # --- SMART DISPLAY FOR COMPOSITION ---
+            display_relation_smart(R, "Relation R (Ordered Pairs)", prefix=r"R =", max_latex=25)
+            display_relation_smart(S, "Relation S (Ordered Pairs)", prefix=r"S =", max_latex=25)
+            display_relation_smart(SoR, "Composition (S ∘ R) (Ordered Pairs)", prefix=r"S \circ R =", max_latex=25)
+
+            st.divider()
+            col_m1, col_m2, col_m3 = st.columns(3)
+            with col_m1:
+                st.markdown("#### $M(R)$")
+                st.dataframe(pd.DataFrame(M_R, index=V, columns=V), use_container_width=True)
+            with col_m2:
+                st.markdown("#### $M(S)$")
+                st.dataframe(pd.DataFrame(M_S, index=V, columns=V), use_container_width=True)
+            with col_m3:
+                st.markdown("#### $M(S \circ R)$")
+                st.caption("Boolean Product: $\,(M(R)\cdot M(S))>0$")
+                st.dataframe(pd.DataFrame(M_SoR_from_mats, index=V, columns=V), use_container_width=True)
+
+            if np.array_equal(M_SoR_rel, M_SoR_from_mats):
+                st.success("✅ Match: definition-based $S\circ R$ equals booleanized matrix product $M(R)\cdot M(S)$.")
+                st.caption("Why: composition requires an intermediate y with xRy and ySz, exactly what boolean multiplication aggregates.")
+            else:
+                st.warning("⚠️ Mismatch detected. Check definitions.")
+
+            st.divider()
+            st.markdown("### 🔎 Explain the Middle Node y (Witness)")
+            st.write("Pick **x** and **z**. We will show which **y** makes the composition true:")
+            w1, w2 = st.columns(2)
+            x_choice = w1.selectbox("Choose x (start)", V, key="witness_x")
+            z_choice = w2.selectbox("Choose z (end)", V, key="witness_z")
+            ys = witness_middle_nodes(x_choice, z_choice, R, S)
+            if ys:
+                st.success(f"✅ Yes. ({x_choice}, {z_choice}) is in $S\circ R$.")
+                st.write(f"**Middle node(s) y that make it work:** {', '.join(map(str, ys))}")
+                support_rows = []
+                for y in ys: support_rows.append({"(x,y) in R": f"({x_choice},{y})", "(y,z) in S": f"({y},{z_choice})"})
+                st.dataframe(pd.DataFrame(support_rows), use_container_width=True)
+            else:
+                if (x_choice, z_choice) in set(SoR): st.warning("It seems reachable, but no witness y was found.")
+                else: st.error(f"❌ No. ({x_choice}, {z_choice}) is NOT in $S\circ R$.")
+
+            st.markdown("### 🧪 Quick Check")
+            q_comp = st.radio(
+                "For (x,z) to be in S∘R, which condition is required?",
+                ["There exists y with xRy and ySz", "xSz and zRy", "xRy only"],
+                key="qc_comp"
+            )
+            if st.button("Check", key="check_qc_comp"):
+                if q_comp == "There exists y with xRy and ySz":
+                    st.success("Correct. Composition needs an intermediate witness y.")
+                else:
+                    st.error("Not correct. Need some y such that xRy and ySz.")
+
+# --- Tab 4: Applications (Scheduler with Discrete Math) ---
+def render_applications():
+    st.subheader("4. Advanced Applications")
+    tab_sched, tab_clus = st.tabs(["Scheduler (Partial Order)", "Clustering (Equivalence)"])
+    
+    with tab_sched:
+        st.markdown("**6.7 & 6.8 Partial Orders & DAGs**")
+        st.info("Topological Sort: Finding a valid execution order for tasks.")
+
+        default_nodes = ["CS1", "CS2", "DataStruct", "DiscreteMath", "Algo", "WebDev"]
+        default_edges = [
+            ("CS1", "CS2"),
+            ("CS2", "DataStruct"),
+            ("CS1", "DiscreteMath"),
+            ("DataStruct", "Algo"),
+            ("DiscreteMath", "Algo"),
+            ("CS1", "WebDev"),
+        ]
+
+        if "sched_nodes" not in st.session_state:
+            st.session_state.sched_nodes = default_nodes.copy()
+        if "sched_edges" not in st.session_state:
+            st.session_state.sched_edges = default_edges.copy()
+        if "sched_history" not in st.session_state:
+            st.session_state.sched_history = []
+
+        nodes_now = st.session_state.sched_nodes
+        edges_now = st.session_state.sched_edges
+
+        def has_cycle(nodes, edges):
+            return topological_sort(nodes, edges) is None
+
+        edges_now = st.session_state.sched_edges
+
+        c1, c2 = st.columns([1, 2])
+        with c1:
+            prereq = {n: [] for n in nodes_now}
+            for u, v in edges_now:
+                prereq[v].append(u)
+            st.json(prereq)
+            st.caption("Algorithms has two prerequisites by default: DataStruct and DiscreteMath.")
+
+        with c2:
+            try:
+                g = graphviz.Digraph(); g.attr(rankdir='LR')
+                for n in nodes_now:
+                    color = '#ffeeba' if n == 'Algo' else '#fff3cd'
+                    g.node(n, style='filled', fillcolor=color)
+                for u, v in edges_now:
+                    g.edge(u, v)
+                st.graphviz_chart(g)
+            except:
+                pass
+
+        st.markdown("#### 🛠️ Edit prerequisite graph")
+        c_add1, c_add2 = st.columns([1, 1])
+        from_node = c_add1.selectbox("Add edge: from", nodes_now, key="edge_from")
+        to_node = c_add2.selectbox("to", nodes_now, index=min(1, len(nodes_now)-1), key="edge_to")
+
+        c_act1, c_act2, c_act3 = st.columns([1, 1, 1])
+        if c_act1.button("Add edge", key="btn_add_edge"):
+            candidate = (from_node, to_node)
+            if candidate in edges_now:
+                st.warning("Edge already exists.")
+            else:
+                trial = edges_now + [candidate]
+                if has_cycle(nodes_now, trial):
+                    st.error("Cycle detected, no topological order exists. Edge not added.")
+                else:
+                    st.session_state.sched_history.append(edges_now.copy())
+                    st.session_state.sched_edges = trial
+                    st.success(f"Added edge: {from_node} → {to_node}")
+
+        if c_act2.button("Undo last edge", key="btn_undo"):
+            if st.session_state.sched_history:
+                st.session_state.sched_edges = st.session_state.sched_history.pop()
+                st.info("Undid last change.")
+            else:
+                st.warning("Nothing to undo.")
+
+        if c_act3.button("Reset to default graph", key="btn_reset"):
+            st.session_state.sched_edges = default_edges.copy()
+            st.session_state.sched_history = []
+            st.success("Reset to default acyclic graph.")
+
+        if st.button("🚀 Run Topological Sort", key="run_topo"):
+            sorted_plan = topological_sort(nodes_now, edges_now)
+            if sorted_plan:
+                st.success(f"✅ One valid topological order: {' → '.join(sorted_plan)}")
+                st.caption("Topological order is a valid sequence, not a Hamiltonian path in the original graph. So the graph edges may not form one straight chain.")
+
+                st.markdown("#### Sequence view of this topological order")
+                order_g = graphviz.Digraph()
+                order_g.attr(rankdir='LR')
+                for n in sorted_plan:
+                    order_g.node(n, style='filled', fillcolor='#e8f5e9')
+                for i in range(len(sorted_plan)-1):
+                    order_g.edge(sorted_plan[i], sorted_plan[i+1], color='#43a047')
+                st.graphviz_chart(order_g)
+
+                st.markdown("#### Why this order is valid")
+                pos = {n:i for i,n in enumerate(sorted_plan)}
+                viol = [(u,v) for (u,v) in edges_now if pos[u] > pos[v]]
+                if not viol:
+                    st.info("All prerequisite edges go from left to right in the sequence (no precedence violations).")
+                else:
+                    st.error(f"Found precedence violations: {viol}")
+            else:
+                st.error("⛔ Cycle detected, no topological order exists.")
+
+        st.markdown("### 🧪 Micro Quiz")
+        quiz_topo = st.radio("When does a topological ordering exist?", ["Only when graph is acyclic (DAG)", "For any directed graph"], key="quiz_topo")
+        if st.button("Check Quiz", key="check_quiz_topo"):
+            if quiz_topo == "Only when graph is acyclic (DAG)":
+                st.success("Correct. Topological order exists iff the graph has no directed cycle.")
+            else:
+                st.error("Not correct. A directed cycle makes topological ordering impossible.")
+
+    with tab_clus:
+        st.markdown("**6.9 Equivalence Relations**")
+        col1, col2 = st.columns([1, 2])
+        with col1:
+            mod = st.number_input("Hash Function (Modulo N):", 2, 5, 3)
+            num_range = st.slider("Data Range:", 1, 20, 10)
+            numbers = list(range(1, num_range + 1))
+        with col2:
+            st.markdown(f"**Buckets (Equivalence Classes):**")
+            clusters = {}
+            for n in numbers:
+                rem = n % mod
+                if rem not in clusters: clusters[rem] = []
+                clusters[rem].append(n)
+            for rem, cluster in sorted(clusters.items()):
+                st.info(f"**Class [{rem}]:** " + "{" + ", ".join(map(str, cluster)) + "}")
+
+        st.markdown("### 🧪 Quick Check")
+        q_eq = st.radio(
+            "For relation x ~ y iff x mod n = y mod n, which is true?",
+            [
+                "It partitions the set into equivalence classes",
+                "It is never reflexive",
+                "It cannot be symmetric"
+            ],
+            key="qc_eq"
+        )
+        if st.button("Check", key="check_qc_eq"):
+            if q_eq == "It partitions the set into equivalence classes":
+                st.success("Correct. Modulo-equivalence groups elements into disjoint classes.")
+            else:
+                st.error("Not correct. This relation is reflexive, symmetric, and transitive.")
+
+
+# ==========================================
+# 4. Main entry point
+# ==========================================
+def main():
+    st.title("Chapter 6: Relations")
+    tabs = st.tabs(["Overview", "1. Basics (The Bridge)", "2. Modeling (Graph/Matrix)", "3. Operations (Logic/DB)", "4. Applications (Real-world)"])
+    with tabs[0]: render_overview()
+    with tabs[1]: render_basics()
+    with tabs[2]: render_modeling()
+    with tabs[3]: render_operations()
+    with tabs[4]: render_applications()
+
+if __name__ == "__main__":
+    main()
