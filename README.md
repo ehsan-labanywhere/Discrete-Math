@@ -10,7 +10,7 @@ An interactive **Streamlit**-based learning system for the textbook *Introductio
 
 ```bash
 # Install dependencies
-pip install streamlit pandas numpy graphviz
+pip install -r requirements.txt
 
 # Run the home page
 streamlit run home.py

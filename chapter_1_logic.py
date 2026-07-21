@@ -24,18 +24,42 @@ st.markdown("""
 # 2. Core logic utilities (Backend logic)
 # ==========================================
 
+class _Bool:
+    """Boolean wrapper so that logical symbols map to Python operators with the
+    correct precedence: ¬ (~) binds tightest, then ∧ (&), then ∨ (|), and
+    finally → (<=) and ↔ (==) bind loosest.
+
+    Using plain `not`/`and`/`or` with `<=` breaks precedence: e.g. `not p <= q`
+    parses as `not (p <= q)` and `p <= not q` is a syntax error.
+    """
+    def __init__(self, v):
+        self.v = bool(v)
+    def __invert__(self):            # ¬p
+        return _Bool(not self.v)
+    def __and__(self, other):        # p ∧ q
+        return _Bool(self.v and other.v)
+    def __or__(self, other):         # p ∨ q
+        return _Bool(self.v or other.v)
+    def __le__(self, other):         # p → q
+        return _Bool((not self.v) or other.v)
+    def __eq__(self, other):         # p ↔ q
+        return _Bool(self.v == other.v)
+    def __bool__(self):
+        return self.v
+
 def eval_logic(expr_str, env):
     """Evaluate a logical expression string given an environment dictionary of boolean values."""
     if not expr_str:
         return False
-    # Replace math symbols with Python boolean operators
-    s = expr_str.replace('∧', ' and ')
-    s = s.replace('∨', ' or ')
-    s = s.replace('¬', ' not ')
+    # Replace math symbols with Python operators (evaluated on _Bool wrappers)
+    s = expr_str.replace('∧', ' & ')
+    s = s.replace('∨', ' | ')
+    s = s.replace('¬', ' ~ ')
     s = s.replace('→', ' <= ')
     s = s.replace('↔', ' == ')
+    wrapped_env = {k: _Bool(v) for k, v in env.items()}
     try:
-        return bool(eval(s, {"__builtins__": None}, env))
+        return bool(eval(s, {"__builtins__": None}, wrapped_env))
     except Exception:
         return None
 

@@ -2,3 +2,4 @@ streamlit
 pandas
 numpy
 graphviz
+jinja2>=3.1.2
