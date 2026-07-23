@@ -128,13 +128,13 @@ button[data-baseweb="tab"][aria-selected="true"] * {{ color:#fff !important; }}
 
 /* ---- Buttons: touch-friendly, rounded-xl ----------------------------- */
 .stButton > button {{
-  border-radius:var(--cs-r-xl); border:1px solid #00274C;
-  background:#00274C; color:#fff; font-weight:600;
-  transition:transform .05s ease, box-shadow .15s ease, background .15s ease, color .15s ease;
+  border-radius:var(--cs-r-xl); border:1px solid #38BDF8;
+  background:#38BDF8; color:#fff; font-weight:600;
+  transition:transform .05s ease, box-shadow .15s ease, background .15s ease;
 }}
 .stButton > button:hover {{
-  background:#FFCB05; border-color:#FFCB05; color:#00274C;
-  box-shadow:0 4px 14px rgba(0,39,76,.30);
+  background:#0284C7; border-color:#0284C7; color:#fff;
+  box-shadow:0 4px 14px rgba(56,189,248,.35);
 }}
 .stButton > button:active {{ transform:translateY(1px); }}
 .stDownloadButton > button {{ border-radius:var(--cs-r-xl); }}
