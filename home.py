@@ -37,7 +37,10 @@ CHAPTERS = [
 
 def _card(num, icon, title, desc, bridge, accent):
     return (
-        f'<div class="cs-course-card" style="--accent:{accent};">'
+        f'<div class="cs-course-card" style="--accent:{accent};cursor:pointer;'
+        f'position:relative;overflow:hidden;">'
+        f'<div style="position:absolute;top:-10px;right:-10px;font-size:3.5rem;'
+        f'opacity:.06;pointer-events:none;">{icon}</div>'
         f'<div class="num">CHAPTER {num}</div>'
         f'<h4>{icon}&nbsp; {title}</h4>'
         f'<p>{desc}</p>'
@@ -49,7 +52,7 @@ def _card(num, icon, title, desc, bridge, accent):
 
 def overview():
     theme.hero(
-        "Discrete Math Learning System",
+        'Discrete Math Learning System <span class="cs-version-badge">v2.0</span>',
         "An interactive bridge between mathematical structures and the computer "
         "science they power — every concept shown in LaTeX and in code, with "
         "live playgrounds and Socratic checks.",
@@ -61,6 +64,27 @@ def overview():
     c1.metric("Chapters", "8")
     c2.metric("Interactive modules", "32+")
     c3.metric("Math ↔ CS bridges", "24+")
+
+    # Feature highlights
+    st.write("")
+    f1, f2, f3, f4 = st.columns(4)
+    features = [
+        (f1, "📐", "LaTeX Notation", "Side-by-side math and code"),
+        (f2, "🧪", "What-If Labs", "Interactive playgrounds"),
+        (f3, "🧑\u200d🏫", "Socratic Checks", "Guided self-assessment"),
+        (f4, "📊", "Visualizations", "Graphviz diagrams & charts"),
+    ]
+    for col, emoji, feat_title, feat_desc in features:
+        with col:
+            st.markdown(
+                f'<div style="text-align:center;padding:12px 8px;">'
+                f'<div style="font-size:1.8rem;margin-bottom:4px;">{emoji}</div>'
+                f'<div style="font-weight:600;font-size:.88rem;color:#1E293B;">'
+                f'{feat_title}</div>'
+                f'<div style="font-size:.78rem;color:#64748B;">{feat_desc}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
 
     st.markdown(
         '<div class="cs-hint">👈 Pick a chapter from the sidebar to start '
@@ -78,9 +102,15 @@ def overview():
 
     st.divider()
     st.markdown(
-        '<p style="text-align:center;color:#64748B;font-size:.85rem;">'
+        '<div style="text-align:center;padding:8px 0;">'
+        '<p style="color:#64748B;font-size:.85rem;margin:0;">'
         'Built with the <b>Cognitive Scaffolding System</b> — clarity, tactile '
-        'logic, and Socratic guidance to manage cognitive load.</p>',
+        'logic, and Socratic guidance to manage cognitive load.</p>'
+        '<p style="margin:6px 0 0;font-size:.75rem;">'
+        '<span style="background:linear-gradient(135deg,#4F46E5,#0D9488);'
+        '-webkit-background-clip:text;-webkit-text-fill-color:transparent;'
+        'font-weight:600;">v2.0 Premium Edition</span>'
+        ' · University of Michigan–Flint</p></div>',
         unsafe_allow_html=True,
     )
 

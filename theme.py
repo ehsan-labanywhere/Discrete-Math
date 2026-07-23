@@ -270,6 +270,142 @@ hr {{ border-color:var(--cs-border); }}
 .cs-step.done + .cs-step .cs-bar, .cs-step.done .cs-bar {{ background:var(--cs-teal); }}
 .cs-label {{ font-size:.74rem; color:var(--cs-ink-soft); margin-left:6px; margin-right:4px; }}
 .cs-step.active .cs-label {{ color:var(--cs-indigo); font-weight:600; }}
+
+/* ===================================================================== */
+/*  v2.0 Premium Enhancements                                           */
+/* ===================================================================== */
+
+/* Smooth transitions on all interactive elements */
+*, *::before, *::after {{ transition: color .15s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease, transform .1s ease; }}
+
+/* Subtle card hover lift */
+.cs-course-card:hover, .cs-card:hover {{
+  box-shadow: 0 8px 25px rgba(30,41,59,.08);
+  border-color: #C7D2FE;
+  transform: translateY(-2px);
+}}
+
+/* Hero shimmer animation */
+@keyframes heroShimmer {{
+  0%   {{ background-position: 0% 50%; }}
+  50%  {{ background-position: 100% 50%; }}
+  100% {{ background-position: 0% 50%; }}
+}}
+.cs-hero {{
+  background: linear-gradient(135deg, #1E293B 0%, #312E81 40%, #4F46E5 70%, #312E81 100%);
+  background-size: 200% 200%;
+  animation: heroShimmer 8s ease infinite;
+  box-shadow: 0 8px 32px rgba(49,46,129,.25);
+}}
+
+/* Glassmorphism metric cards */
+[data-testid="stMetric"] {{
+  background: rgba(255,255,255,.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(226,232,240,.6);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgba(30,41,59,.04);
+}}
+[data-testid="stMetric"]:hover {{
+  box-shadow: 0 4px 20px rgba(79,70,229,.1);
+  border-color: #C7D2FE;
+}}
+[data-testid="stMetricValue"] {{
+  font-weight: 700 !important;
+  font-size: 1.8rem !important;
+  background: linear-gradient(135deg, #4F46E5, #0D9488);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}}
+
+/* Enhanced tab hover */
+button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {{
+  background: rgba(79,70,229,.06);
+  color: #4F46E5;
+}}
+
+/* Polished expander hover */
+[data-testid="stExpander"]:hover {{
+  border-color: #C7D2FE;
+  box-shadow: 0 2px 12px rgba(79,70,229,.06);
+}}
+
+/* Input focus glow */
+[data-baseweb="input"] input:focus, .stTextInput input:focus {{
+  border-color: #4F46E5 !important;
+  box-shadow: 0 0 0 3px rgba(79,70,229,.12) !important;
+}}
+
+/* Success/Error/Info alert polish */
+[data-testid="stAlert"] {{
+  box-shadow: 0 2px 8px rgba(30,41,59,.04);
+}}
+
+/* Smooth button press */
+.stButton > button:active {{
+  transform: translateY(1px) scale(.98);
+}}
+
+/* Animated hint box */
+.cs-hint {{
+  position: relative;
+  overflow: hidden;
+}}
+.cs-hint::before {{
+  content: '';
+  position: absolute;
+  top: 0; left: -100%; width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(217,119,6,.06), transparent);
+  animation: hintShine 4s ease infinite;
+}}
+@keyframes hintShine {{
+  0%   {{ left: -100%; }}
+  100% {{ left: 200%; }}
+}}
+
+/* Playground pulse border */
+.cs-playground {{
+  position: relative;
+}}
+@keyframes tealPulse {{
+  0%, 100% {{ border-left-color: #0D9488; }}
+  50%      {{ border-left-color: #5EEAD4; }}
+}}
+.cs-playground {{ animation: tealPulse 3s ease-in-out infinite; }}
+
+/* Bridge box arrow animation */
+.highlight-box:hover {{
+  border-left-color: #4F46E5;
+  box-shadow: 0 2px 12px rgba(79,70,229,.08);
+}}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {{ width: 6px; height: 6px; }}
+::-webkit-scrollbar-track {{ background: transparent; }}
+::-webkit-scrollbar-thumb {{ background: #CBD5E1; border-radius: 99px; }}
+::-webkit-scrollbar-thumb:hover {{ background: #94A3B8; }}
+
+/* Sidebar polish */
+[data-testid="stSidebar"] {{
+  box-shadow: 2px 0 12px rgba(30,41,59,.04);
+}}
+
+/* Version badge */
+.cs-version-badge {{
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: .7rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  background: linear-gradient(135deg, #4F46E5, #0D9488);
+  color: #fff;
+  margin-left: 8px;
+  vertical-align: middle;
+}}
 </style>
 """
 
