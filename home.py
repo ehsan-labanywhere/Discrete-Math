@@ -1,71 +1,88 @@
 import streamlit as st
+import theme
 
-st.set_page_config(
-    page_title="Discrete Math Bridge",
-    page_icon="📚",
-    layout="wide"
-)
+theme.setup_page("Discrete Math Bridge", "📚")
+
+
+# --------------------------------------------------------------------------- #
+#  Course metadata — drives the roadmap grid
+# --------------------------------------------------------------------------- #
+CHAPTERS = [
+    ("01", "🔣", "Logic & Proofs",
+     "Truth tables, De Morgan's laws, quantifiers and the four proof methods.",
+     "Logic gates · boolean expressions · data validation", theme.INDIGO),
+    ("02", "🧮", "Sets & Set Operations",
+     "Membership, unions, power sets and Venn diagrams over finite domains.",
+     "Python sets · SQL JOINs · test generation", theme.TEAL),
+    ("03", "🔁", "Induction & Recursion",
+     "Weak & strong induction, recursive definitions and solving recurrences.",
+     "Loop invariants · recursion trees · call stacks", theme.INDIGO),
+    ("04", "🎯", "Functions",
+     "Domain/codomain, injective/surjective/bijective, composition and inverses.",
+     "Hash functions · APIs · middleware pipelines", theme.TEAL),
+    ("05", "🎲", "Counting & Combinatorics",
+     "Sum/product rules, permutations, pigeonhole and inclusion–exclusion.",
+     "Password strength · birthday paradox · Pascal's triangle", theme.AMBER),
+    ("06", "🔗", "Relations",
+     "Digraphs, matrices, composition, equivalence classes and orderings.",
+     "SQL tables · topological sort · clustering", theme.INDIGO),
+    ("07", "🕸️", "Graph Theory",
+     "Degrees, connectivity, BFS/DFS, shortest paths and graph coloring.",
+     "Social networks · routing · exam scheduling", theme.TEAL),
+    ("08", "🌳", "Trees",
+     "Rooted & binary trees, traversals, spanning trees and game trees.",
+     "File systems · MST · Minimax AI", theme.AMBER),
+]
+
+
+def _card(num, icon, title, desc, bridge, accent):
+    return (
+        f'<div class="cs-course-card" style="--accent:{accent};">'
+        f'<div class="num">CHAPTER {num}</div>'
+        f'<h4>{icon}&nbsp; {title}</h4>'
+        f'<p>{desc}</p>'
+        f'<p style="margin-top:10px;font-family:\'JetBrains Mono\',monospace;'
+        f'font-size:.76rem;color:{accent};">↳ {bridge}</p>'
+        f'</div>'
+    )
 
 
 def overview():
-    st.title("📚 Discrete Math Learning System")
-    st.markdown("### Bridging Mathematics & Computer Science")
+    theme.hero(
+        "Discrete Math Learning System",
+        "An interactive bridge between mathematical structures and the computer "
+        "science they power — every concept shown in LaTeX and in code, with "
+        "live playgrounds and Socratic checks.",
+        kicker="University of Michigan–Flint",
+    )
 
-    st.info("👈 Please select a Chapter from the sidebar to begin.")
+    st.write("")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Chapters", "8")
+    c2.metric("Interactive modules", "32+")
+    c3.metric("Math ↔ CS bridges", "24+")
 
-    st.markdown("""
-    ### Course Roadmap
+    st.markdown(
+        '<div class="cs-hint">👈 Pick a chapter from the sidebar to start '
+        'experimenting, or browse the roadmap below.</div>',
+        unsafe_allow_html=True,
+    )
 
-    #### 🟢 **Chapter 1: Logic & Proofs**
-    * **Propositions & Connectives**: Truth tables, AND/OR/NOT gates.
-    * **Equivalences**: De Morgan's Laws, tautologies & contradictions.
-    * **Predicate Logic**: ∀ and ∃ quantifiers over finite domains.
-    * **Proof Methods**: Direct, contrapositive, contradiction & induction.
+    st.markdown("### Course Roadmap")
+    for row in range(0, len(CHAPTERS), 2):
+        cols = st.columns(2, gap="medium")
+        for col, ch in zip(cols, CHAPTERS[row:row + 2]):
+            with col:
+                st.markdown(_card(*ch), unsafe_allow_html=True)
+        st.write("")
 
-    #### 🟢 **Chapter 2: Sets & Set Operations**
-    * **Set Basics**: Membership, subsets, cardinality.
-    * **Operations**: Union, intersection, difference & Venn diagrams.
-    * **Power Sets & Cartesian Products**: Combinatorial test generation.
-    * **Set Identities**: De Morgan's, distributive & absorption laws.
-
-    #### 🟢 **Chapter 3: Proofs, Induction & Recursion**
-    * **Mathematical Induction**: Step-through proofs with loop invariants.
-    * **Strong Induction**: Prime factorization & Fibonacci bounds.
-    * **Recursive Definitions**: Recursion trees & call stack visualization.
-    * **Solving Recurrences**: Linear recurrences & algorithm complexity.
-
-    #### 🟢 **Chapter 4: Functions**
-    * **Function Basics**: Domain, codomain, range & arrow diagrams.
-    * **Properties**: Injective, surjective, bijective & hash collisions.
-    * **Composition & Inverse**: Function pipelines & middleware chains.
-    * **Special Functions**: Floor, ceiling, modular arithmetic & hashing.
-
-    #### 🟢 **Chapter 5: Counting & Combinatorics**
-    * **Basic Counting**: Sum rule, product rule & decision trees.
-    * **Permutations & Combinations**: Pascal's Triangle & password strength.
-    * **Pigeonhole Principle**: Birthday paradox & hash collisions.
-    * **Inclusion-Exclusion**: Survey analysis & Euler's Totient.
-
-    #### 🟢 **Chapter 6: Relations**
-    * **The Bridge**: Why `Relation` ≈ `SQL Table`.
-    * **Modeling**: Visualizing Social Networks with Digraphs & Matrices.
-    * **Operations**: How `Composition` explains "Friends of Friends".
-    * **Applications**:
-        * **Task Scheduling** (using Topological Sort on DAGs).
-        * **Data Clustering** (using Equivalence Relations).
-
-    #### 🟢 **Chapter 7: Graph Theory**
-    * **Graph Basics**: Vertices, edges, degrees & adjacency representations.
-    * **Graph Types**: Bipartite, complete, connected & Eulerian checks.
-    * **Paths & Traversal**: BFS, DFS & shortest path algorithms.
-    * **Graph Coloring**: Chromatic number & exam scheduling game.
-
-    #### 🟢 **Chapter 8: Trees**
-    * **Tree Basics**: Rooted trees, binary trees & tree properties.
-    * **Traversals**: Pre-order, in-order, post-order & level-order.
-    * **Spanning Trees**: Kruskal's & Prim's MST algorithms.
-    * **Decision & Game Trees**: Tic-Tac-Toe with Minimax AI.
-    """)
+    st.divider()
+    st.markdown(
+        '<p style="text-align:center;color:#64748B;font-size:.85rem;">'
+        'Built with the <b>Cognitive Scaffolding System</b> — clarity, tactile '
+        'logic, and Socratic guidance to manage cognitive load.</p>',
+        unsafe_allow_html=True,
+    )
 
 
 pages = [

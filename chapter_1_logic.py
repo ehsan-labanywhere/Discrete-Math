@@ -1,4 +1,5 @@
 import streamlit as st
+import theme
 import pandas as pd
 import numpy as np
 import graphviz
@@ -8,17 +9,7 @@ from collections import deque
 # ==========================================
 # 1. Page configuration and styling 
 # ==========================================
-st.set_page_config(page_title="Ch 1: Logic & Proofs", layout="wide")
-
-st.markdown("""
-<style>
-    .math-tag { background-color: #e3f2fd; color: #0d47a1; padding: 4px 8px; border-radius: 5px; font-weight: bold; }
-    .db-tag { background-color: #fce4ec; color: #880e4f; padding: 4px 8px; border-radius: 5px; font-weight: bold; }
-    .highlight-box { background-color: #f0f2f6; border-left: 5px solid #4caf50; padding: 15px; margin: 10px 0; border-radius: 5px; }
-    h3 { color: #1f77b4; }
-    .stButton>button { width: 100%; }
-</style>
-""", unsafe_allow_html=True)
+theme.setup_page("Ch 1: Logic & Proofs", "🔣")
 
 # ==========================================
 # 2. Core logic utilities (Backend logic)
@@ -463,29 +454,36 @@ def render_proofs():
     elif proof_type == "Mathematical Induction":
         st.markdown("### Mathematical Induction")
         st.markdown("**Theorem**: The sum of the first $n$ positive integers is $\\frac{n(n+1)}{2}$.")
-        
+
+        steps = ["Base case", "Hypothesis", "Inductive step", "Verify"]
+        theme.stepper(steps, current=4)
+
         n_val = st.slider("Select n for demonstration:", 1, 10, 5, key="ind_n")
-        
-        st.markdown("#### Step 1: Base Case (n=1)")
+
+        st.markdown("#### Step 1 · Base Case (n = 1)")
         st.markdown(f"Left side: $1$")
         st.markdown(f"Right side: $\\frac{{1(1+1)}}{{2}} = 1$")
         st.success("Base case holds.")
-        
-        st.markdown("#### Step 2: Inductive Step")
+
+        st.markdown("#### Step 2 · Inductive Step")
         st.markdown("Assume true for $k$. Show true for $k+1$.")
-        
-        st.markdown(f"**Let's verify for $n={n_val}$:**")
+        theme.hint("The inductive hypothesis is your one free assumption — use it to "
+                   "rewrite the $k+1$ case in terms of the $k$ case.")
+
+        st.markdown(f"#### Step 3 · Verify for $n = {n_val}$")
         sum_actual = sum(range(1, n_val + 1))
         formula_val = (n_val * (n_val + 1)) // 2
-        
+
         seq_str = " + ".join(map(str, range(1, n_val + 1)))
         st.markdown(f"**Actual Sum**: {seq_str} = **{sum_actual}**")
         st.markdown(f"**Formula**: $\\frac{{{n_val}({n_val}+1)}}{{2}} = \\frac{{{n_val * (n_val+1)}}}{{2}}$ = **{formula_val}**")
-        
+
         if sum_actual == formula_val:
             st.success("Matches perfectly! ✅")
-            
-        st.markdown("**CS Bridge:** Induction is deeply connected to verifying **recursive functions**. Base cases map to recursion base cases, and inductive steps map to the recursive calls.")
+
+        theme.bridge("Inductive Hypothesis", "Loop Invariant",
+                     "Base cases map to recursion base cases; the inductive step "
+                     "maps to the recursive call that verifies a function.")
 
     st.divider()
     st.markdown("### 🧪 Quick Check")
@@ -504,7 +502,7 @@ def render_proofs():
 # 4. Main entry point
 # ==========================================
 def main():
-    st.title("Chapter 1: Logic & Proofs")
+    theme.chapter_header("LOGIC", "Chapter 1: Logic & Proofs", "Propositions, truth tables, quantifiers and the four proof methods.")
     tabs = st.tabs(["Overview", "1. Propositions", "2. Truth Tables", "3. Predicates", "4. Proofs"])
     with tabs[0]: render_overview()
     with tabs[1]: render_propositions()

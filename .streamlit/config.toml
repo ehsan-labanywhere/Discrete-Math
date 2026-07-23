@@ -1,0 +1,14 @@
+# Cognitive Scaffolding System — native Streamlit theme
+# Full design tokens live in theme.py (injected CSS). This gives Streamlit's
+# own widgets (sliders, radios, charts) a matching base palette.
+
+[theme]
+base = "light"
+primaryColor = "#4F46E5"          # Indigo — the "logic" / active color
+backgroundColor = "#F7F9FB"       # Slate 50 — Level 0 base
+secondaryBackgroundColor = "#FFFFFF"  # Level 1 card surface
+textColor = "#1E293B"             # Deep Slate — primary text
+font = "sans serif"
+
+[server]
+runOnSave = true

@@ -1,0 +1,375 @@
+"""
+Cognitive Scaffolding System
+============================
+Central design-system module for the Discrete Math Learning System.
+
+Everything visual lives here so the eight chapters and the home page share a
+single, consistent language. Import it and call ``theme.setup_page(...)`` as the
+first Streamlit command in every page:
+
+    import theme
+    theme.setup_page("Ch 1: Logic & Proofs", "🔣")
+
+Design tokens are taken from DESIGN.md ("Cognitive Scaffolding System"):
+  * Deep Slate  #1E293B — structure & primary text
+  * Indigo      #4F46E5 — logic / active / focus
+  * Teal        #0D9488 — interaction / success / "what-if"
+  * Amber       #D97706 — Socratic hints / cautions
+  * Slate 50-200 tonal layers for elevation (tonal, not heavy shadow)
+  * Inter for instruction, JetBrains Mono for logic/proofs
+"""
+
+import streamlit as st
+
+# --------------------------------------------------------------------------- #
+#  Design tokens (single source of truth)
+# --------------------------------------------------------------------------- #
+COLORS = {
+    "base": "#F7F9FB",          # Level 0 background (Slate 50)
+    "surface": "#FFFFFF",        # Level 1 card
+    "surface_low": "#F2F4F6",
+    "surface_high": "#ECEEF1",
+    "border": "#E2E8F0",         # Slate 200 hairline
+    "border_strong": "#CBD5E1",
+    "ink": "#1E293B",            # Deep Slate — primary text
+    "ink_soft": "#475569",       # secondary text
+    "ink_faint": "#64748B",
+    "slate": "#1E293B",
+    "indigo": "#4F46E5",         # logic / active
+    "indigo_soft": "#EEF2FF",
+    "indigo_ink": "#3730A3",
+    "teal": "#0D9488",           # interaction / success
+    "teal_soft": "#F0FDFA",
+    "teal_ink": "#115E59",
+    "amber": "#D97706",          # hints / caution
+    "amber_soft": "#FFFBEB",
+    "amber_ink": "#92400E",
+    "red": "#BA1A1A",
+    "red_soft": "#FEF2F2",
+}
+
+# Public constants other modules can reuse for e.g. graphviz node colors
+INDIGO = COLORS["indigo"]
+TEAL = COLORS["teal"]
+AMBER = COLORS["amber"]
+SLATE = COLORS["slate"]
+
+
+# --------------------------------------------------------------------------- #
+#  Global CSS
+# --------------------------------------------------------------------------- #
+def _css() -> str:
+    c = COLORS
+    return f"""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;450;500;600&display=swap');
+
+:root {{
+  --cs-base:{c['base']}; --cs-surface:{c['surface']}; --cs-border:{c['border']};
+  --cs-ink:{c['ink']}; --cs-ink-soft:{c['ink_soft']};
+  --cs-indigo:{c['indigo']}; --cs-teal:{c['teal']}; --cs-amber:{c['amber']};
+  --cs-r-sm:4px; --cs-r-lg:8px; --cs-r-xl:12px;
+}}
+
+/* ---- Base typography & canvas ---------------------------------------- */
+html, body, [class*="css"], .stApp, [data-testid="stAppViewContainer"] {{
+  font-family:'Inter', system-ui, -apple-system, sans-serif;
+  color:var(--cs-ink);
+}}
+.stApp {{ background:var(--cs-base); }}
+[data-testid="stAppViewContainer"] .main .block-container {{
+  padding-top:2.2rem; max-width:1180px;
+}}
+
+h1, h2, h3, h4 {{ color:var(--cs-ink); font-weight:700; letter-spacing:-0.02em; }}
+h1 {{ font-size:2rem; line-height:1.15; }}
+h2 {{ font-size:1.5rem; }}
+h3 {{ font-size:1.2rem; color:var(--cs-ink) !important; font-weight:600; }}
+p, li, .stMarkdown {{ color:var(--cs-ink); line-height:1.6; }}
+
+/* ---- Logic typeface: proofs, code, LaTeX ----------------------------- */
+code, kbd, pre, .stCode, [data-testid="stCodeBlock"] {{
+  font-family:'JetBrains Mono', ui-monospace, monospace !important;
+}}
+[data-testid="stCodeBlock"] {{
+  border:1px solid var(--cs-border); border-radius:var(--cs-r-lg);
+}}
+.katex {{ font-size:1.08em; }}
+[data-testid="stMarkdownContainer"] .katex-display {{
+  overflow-x:auto; overflow-y:hidden; padding:6px 2px;
+  background:var(--cs-surface); border:1px solid var(--cs-border);
+  border-radius:var(--cs-r-lg);
+  -webkit-mask-image:linear-gradient(90deg,#000 92%,transparent);
+          mask-image:linear-gradient(90deg,#000 92%,transparent);
+}}
+
+/* ---- Sidebar (course structure) -------------------------------------- */
+[data-testid="stSidebar"] {{
+  background:var(--cs-surface); border-right:1px solid var(--cs-border);
+}}
+[data-testid="stSidebarNav"] a[aria-current="page"] {{
+  background:{c['indigo_soft']} !important; font-weight:600;
+}}
+
+/* ---- Tabs: multi-pane workspace feel --------------------------------- */
+[data-baseweb="tab-list"] {{
+  gap:4px; background:var(--cs-surface); padding:5px;
+  border:1px solid var(--cs-border); border-radius:var(--cs-r-xl);
+}}
+button[data-baseweb="tab"] {{
+  border-radius:var(--cs-r-lg); padding:6px 14px; color:var(--cs-ink-soft);
+  font-weight:500;
+}}
+button[data-baseweb="tab"][aria-selected="true"] {{
+  background:var(--cs-indigo); color:#fff;
+}}
+[data-baseweb="tab-highlight"], [data-baseweb="tab-border"] {{ display:none; }}
+button[data-baseweb="tab"][aria-selected="true"] * {{ color:#fff !important; }}
+
+/* ---- Buttons: touch-friendly, rounded-xl ----------------------------- */
+.stButton > button {{
+  border-radius:var(--cs-r-xl); border:1px solid var(--cs-indigo);
+  background:var(--cs-indigo); color:#fff; font-weight:600;
+  transition:transform .05s ease, box-shadow .15s ease;
+}}
+.stButton > button:hover {{
+  background:{c['indigo_ink']}; border-color:{c['indigo_ink']}; color:#fff;
+  box-shadow:0 4px 14px rgba(79,70,229,.28);
+}}
+.stButton > button:active {{ transform:translateY(1px); }}
+.stDownloadButton > button {{ border-radius:var(--cs-r-xl); }}
+
+/* ---- Expanders as tonal cards ---------------------------------------- */
+[data-testid="stExpander"] {{
+  border:1px solid var(--cs-border); border-radius:var(--cs-r-lg);
+  background:var(--cs-surface); box-shadow:none;
+}}
+[data-testid="stExpander"] summary {{ font-weight:600; color:var(--cs-ink); }}
+[data-testid="stExpander"] summary:hover {{ color:var(--cs-indigo); }}
+
+/* ---- Inputs ---------------------------------------------------------- */
+[data-baseweb="input"] input, [data-baseweb="select"] > div, .stTextInput input {{
+  border-radius:var(--cs-r-lg) !important;
+}}
+
+/* ---- Dataframes / truth tables --------------------------------------- */
+[data-testid="stDataFrame"], [data-testid="stTable"] {{
+  border:1px solid var(--cs-border); border-radius:var(--cs-r-lg);
+  overflow:hidden;
+}}
+
+/* ---- Alerts as Socratic / status blocks ------------------------------ */
+[data-testid="stAlert"] {{ border-radius:var(--cs-r-lg); border:1px solid transparent; }}
+
+/* ---- Dividers -------------------------------------------------------- */
+hr {{ border-color:var(--cs-border); }}
+
+/* ===================================================================== */
+/*  Design-system components (used via helper functions & inline HTML)   */
+/* ===================================================================== */
+
+/* Bridge tags: Math <-> CS translation */
+.math-tag {{
+  background:{c['indigo_soft']}; color:{c['indigo_ink']}; padding:3px 9px;
+  border-radius:var(--cs-r-sm); font-weight:600; font-size:.85em;
+  font-family:'JetBrains Mono', monospace;
+}}
+.db-tag {{
+  background:{c['teal_soft']}; color:{c['teal_ink']}; padding:3px 9px;
+  border-radius:var(--cs-r-sm); font-weight:600; font-size:.85em;
+  font-family:'JetBrains Mono', monospace;
+}}
+
+/* Highlight / bridge box (Level 1 card with indigo accent) */
+.highlight-box {{
+  background:var(--cs-surface); border:1px solid var(--cs-border);
+  border-left:4px solid var(--cs-indigo); padding:14px 16px; margin:12px 0;
+  border-radius:var(--cs-r-lg);
+}}
+
+/* Hero header */
+.cs-hero {{
+  background:linear-gradient(135deg,#1E293B 0%,#312E81 100%);
+  color:#fff; padding:34px 32px; border-radius:var(--cs-r-xl); margin-bottom:6px;
+}}
+.cs-hero .kicker {{
+  text-transform:uppercase; letter-spacing:.14em; font-size:.72rem;
+  font-weight:600; color:#C7D2FE;
+}}
+.cs-hero h1 {{ color:#fff !important; margin:.35rem 0 .5rem; font-size:2.15rem; }}
+.cs-hero p {{ color:#CBD5E1; font-size:1.02rem; margin:0; max-width:70ch; }}
+
+/* Chapter header band */
+.cs-chip {{
+  display:inline-block; padding:4px 11px; border-radius:999px;
+  font-size:.74rem; font-weight:600; letter-spacing:.03em;
+  background:{c['indigo_soft']}; color:{c['indigo_ink']};
+}}
+
+/* Content card */
+.cs-card {{
+  background:var(--cs-surface); border:1px solid var(--cs-border);
+  border-radius:var(--cs-r-lg); padding:18px 20px; margin:10px 0;
+}}
+.cs-card h4 {{ margin-top:0; }}
+
+/* Roadmap grid card */
+.cs-course-card {{
+  background:var(--cs-surface); border:1px solid var(--cs-border);
+  border-top:3px solid var(--accent,#4F46E5);
+  border-radius:var(--cs-r-lg); padding:16px 18px; height:100%;
+}}
+.cs-course-card .num {{
+  font-family:'JetBrains Mono',monospace; font-size:.78rem; font-weight:600;
+  color:var(--accent,#4F46E5);
+}}
+.cs-course-card h4 {{ margin:.15rem 0 .4rem; font-size:1.02rem; }}
+.cs-course-card p {{ font-size:.86rem; color:var(--cs-ink-soft); margin:0; }}
+
+/* Socratic hint (amber thought-bubble) */
+.cs-hint {{
+  background:{c['amber_soft']}; border:1px solid #FDE68A;
+  border-left:4px solid var(--cs-amber); border-radius:var(--cs-r-lg);
+  padding:12px 15px; margin:10px 0; color:{c['amber_ink']};
+}}
+.cs-hint b {{ color:{c['amber_ink']}; }}
+
+/* Tutor bubble (Socratic dialogue) */
+.cs-tutor {{
+  background:var(--cs-surface-high,#ECEEF1); border-radius:14px 14px 14px 4px;
+  padding:12px 16px; margin:8px 0; color:var(--cs-ink); max-width:88%;
+  border:1px solid var(--cs-border);
+}}
+
+/* What-If playground band */
+.cs-playground {{
+  background:{c['teal_soft']}; border:1px solid #99F6E4;
+  border-left:4px solid var(--cs-teal); border-radius:var(--cs-r-lg);
+  padding:6px 16px 14px; margin:12px 0;
+}}
+.cs-playground .pg-label {{
+  color:{c['teal_ink']}; font-weight:600; font-size:.8rem;
+  text-transform:uppercase; letter-spacing:.06em;
+}}
+
+/* Stateful stepper */
+.cs-stepper {{ display:flex; align-items:center; margin:6px 0 14px; flex-wrap:wrap; gap:2px; }}
+.cs-step {{ display:flex; align-items:center; }}
+.cs-node {{
+  width:26px; height:26px; border-radius:999px; display:flex;
+  align-items:center; justify-content:center; font-size:.78rem; font-weight:700;
+  border:2px solid var(--cs-border); background:var(--cs-surface);
+  color:var(--cs-ink-soft); font-family:'JetBrains Mono',monospace;
+}}
+.cs-step.done .cs-node {{ background:var(--cs-teal); border-color:var(--cs-teal); color:#fff; }}
+.cs-step.active .cs-node {{
+  background:var(--cs-indigo); border-color:var(--cs-indigo); color:#fff;
+  box-shadow:0 0 0 4px {c['indigo_soft']};
+}}
+.cs-bar {{ width:34px; height:2px; background:var(--cs-border); }}
+.cs-step.done + .cs-step .cs-bar, .cs-step.done .cs-bar {{ background:var(--cs-teal); }}
+.cs-label {{ font-size:.74rem; color:var(--cs-ink-soft); margin-left:6px; margin-right:4px; }}
+.cs-step.active .cs-label {{ color:var(--cs-indigo); font-weight:600; }}
+</style>
+"""
+
+
+# --------------------------------------------------------------------------- #
+#  Page setup
+# --------------------------------------------------------------------------- #
+def setup_page(title: str, icon: str = "📐", layout: str = "wide") -> None:
+    """First Streamlit call on every page. Sets config + injects the theme.
+
+    ``set_page_config`` may only run once per session; under ``st.navigation``
+    the entry page already calls it, so we swallow the resulting exception.
+    """
+    try:
+        st.set_page_config(page_title=title, page_icon=icon, layout=layout)
+    except Exception:
+        pass
+    st.markdown(_css(), unsafe_allow_html=True)
+
+
+# --------------------------------------------------------------------------- #
+#  Component helpers  (return/emit design-system HTML)
+# --------------------------------------------------------------------------- #
+def hero(title: str, subtitle: str = "", kicker: str = "") -> None:
+    """Gradient hero banner for landing / chapter intros."""
+    k = f'<div class="kicker">{kicker}</div>' if kicker else ""
+    s = f"<p>{subtitle}</p>" if subtitle else ""
+    st.markdown(f'<div class="cs-hero">{k}<h1>{title}</h1>{s}</div>',
+                unsafe_allow_html=True)
+
+
+def chapter_header(chip: str, title: str, subtitle: str = "") -> None:
+    """Compact chapter title band with a category chip."""
+    s = f'<p style="color:#475569;margin:.35rem 0 0;">{subtitle}</p>' if subtitle else ""
+    st.markdown(
+        f'<span class="cs-chip">{chip}</span>'
+        f'<h1 style="margin:.5rem 0 .1rem;">{title}</h1>{s}',
+        unsafe_allow_html=True,
+    )
+
+
+def bridge(math_label: str, cs_label: str, note: str = "") -> None:
+    """Render a Math ↔ CS bridge box."""
+    n = f'<div style="margin-top:6px;color:#475569;font-size:.9em;">{note}</div>' if note else ""
+    st.markdown(
+        f'<div class="highlight-box">'
+        f'<span class="math-tag">{math_label}</span>'
+        f'<span style="margin:0 8px;color:#94A3B8;">&rarr;</span>'
+        f'<span class="db-tag">{cs_label}</span>{n}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def hint(text: str) -> None:
+    """Amber Socratic hint / thought bubble."""
+    st.markdown(f'<div class="cs-hint">💡 <b>Hint:</b> {text}</div>',
+                unsafe_allow_html=True)
+
+
+def tutor(text: str) -> None:
+    """Socratic tutor dialogue bubble."""
+    st.markdown(f'<div class="cs-tutor">🧑‍🏫 {text}</div>',
+                unsafe_allow_html=True)
+
+
+def stepper(labels, current: int) -> None:
+    """Stateful progress stepper. Steps before ``current`` are done (teal),
+    ``current`` is active (indigo), the rest are pending.
+
+    ``current`` is 1-indexed.
+    """
+    html = ['<div class="cs-stepper">']
+    for i, lab in enumerate(labels, start=1):
+        cls = "done" if i < current else "active" if i == current else ""
+        bar = '<div class="cs-bar"></div>' if i > 1 else ""
+        mark = "✓" if i < current else str(i)
+        html.append(
+            f'{bar}<div class="cs-step {cls}">'
+            f'<div class="cs-node">{mark}</div>'
+            f'<span class="cs-label">{lab}</span></div>'
+        )
+    html.append("</div>")
+    st.markdown("".join(html), unsafe_allow_html=True)
+
+
+def playground_open(label: str = "What-If Playground") -> None:
+    """Open a Teal 'what-if' band. Pair with ``playground_close()``.
+
+    Note: Streamlit widgets rendered between open/close sit visually inside
+    the band via a negative-margin wrapper.
+    """
+    st.markdown(f'<div class="cs-playground"><div class="pg-label">🧪 {label}</div>',
+                unsafe_allow_html=True)
+
+
+def playground_close() -> None:
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+def section(title: str, subtitle: str = "") -> None:
+    """Lightweight section header used inside chapters."""
+    s = f'<span style="color:#64748B;font-weight:400;font-size:.9rem;">&nbsp;— {subtitle}</span>' if subtitle else ""
+    st.markdown(f"### {title}{s}", unsafe_allow_html=True)

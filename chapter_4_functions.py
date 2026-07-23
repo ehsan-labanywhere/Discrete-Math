@@ -1,4 +1,5 @@
 import streamlit as st
+import theme
 import pandas as pd
 import numpy as np
 import graphviz
@@ -7,17 +8,7 @@ import math
 # ==========================================
 # 1. Page configuration and styling
 # ==========================================
-st.set_page_config(page_title="Ch 4: Functions", layout="wide")
-
-st.markdown("""
-<style>
-    .math-tag { background-color: #e3f2fd; color: #0d47a1; padding: 4px 8px; border-radius: 5px; font-weight: bold; }
-    .db-tag { background-color: #fce4ec; color: #880e4f; padding: 4px 8px; border-radius: 5px; font-weight: bold; }
-    .highlight-box { background-color: #f0f2f6; border-left: 5px solid #4caf50; padding: 15px; margin: 10px 0; border-radius: 5px; }
-    h3 { color: #1f77b4; }
-    .stButton>button { width: 100%; }
-</style>
-""", unsafe_allow_html=True)
+theme.setup_page("Ch 4: Functions", "🎯")
 
 # ==========================================
 # 2. Core algorithm utilities
@@ -431,7 +422,7 @@ def render_special_functions():
 # 4. Main entry point
 # ==========================================
 def main():
-    st.title("Chapter 4: Functions")
+    theme.chapter_header("FUNCTIONS", "Chapter 4: Functions", "Domain, codomain, injective/surjective/bijective, composition and inverses.")
     tabs = st.tabs(["Overview", "1. Basics", "2. Properties", "3. Composition & Inverse", "4. Special Functions"])
     with tabs[0]: render_overview()
     with tabs[1]: render_basics()

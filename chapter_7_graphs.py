@@ -1,4 +1,5 @@
 import streamlit as st
+import theme
 import pandas as pd
 import numpy as np
 import graphviz
@@ -7,17 +8,7 @@ from collections import deque
 # ==========================================
 # 1. Page configuration and styling
 # ==========================================
-st.set_page_config(page_title="Ch 7: Graph Theory", layout="wide")
-
-st.markdown("""
-<style>
-    .math-tag { background-color: #e3f2fd; color: #0d47a1; padding: 4px 8px; border-radius: 5px; font-weight: bold; }
-    .db-tag { background-color: #fce4ec; color: #880e4f; padding: 4px 8px; border-radius: 5px; font-weight: bold; }
-    .highlight-box { background-color: #f0f2f6; border-left: 5px solid #4caf50; padding: 15px; margin: 10px 0; border-radius: 5px; }
-    h3 { color: #1f77b4; }
-    .stButton>button { width: 100%; }
-</style>
-""", unsafe_allow_html=True)
+theme.setup_page("Ch 7: Graph Theory", "🕸️")
 
 # ==========================================
 # 2. Core algorithm utilities
@@ -476,7 +467,7 @@ def render_coloring():
 # 4. Main entry point
 # ==========================================
 def main():
-    st.title("Chapter 7: Graph Theory")
+    theme.chapter_header("GRAPHS", "Chapter 7: Graph Theory", "Degrees, connectivity, traversal, shortest paths and coloring.")
     tabs = st.tabs(["Overview", "1. Graph Basics", "2. Types & Properties", "3. Paths & Traversal", "4. Graph Coloring"])
     with tabs[0]: render_overview()
     with tabs[1]: render_basics()

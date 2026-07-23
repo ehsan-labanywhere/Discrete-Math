@@ -1,4 +1,5 @@
 import streamlit as st
+import theme
 import pandas as pd
 import numpy as np
 import graphviz
@@ -7,17 +8,7 @@ import itertools
 # ==========================================
 # 1. Page configuration and styling
 # ==========================================
-st.set_page_config(page_title="Ch 2: Sets & Set Operations", layout="wide")
-
-st.markdown("""
-<style>
-    .math-tag { background-color: #e3f2fd; color: #0d47a1; padding: 4px 8px; border-radius: 5px; font-weight: bold; }
-    .db-tag { background-color: #fce4ec; color: #880e4f; padding: 4px 8px; border-radius: 5px; font-weight: bold; }
-    .highlight-box { background-color: #f0f2f6; border-left: 5px solid #4caf50; padding: 15px; margin: 10px 0; border-radius: 5px; }
-    h3 { color: #1f77b4; }
-    .stButton>button { width: 100%; }
-</style>
-""", unsafe_allow_html=True)
+theme.setup_page("Ch 2: Sets & Set Operations", "🧮")
 
 # ==========================================
 # 2. Core utility functions (backend logic)
@@ -380,7 +371,7 @@ def render_identities():
             st.error("Incorrect. Complementing a union flips the operator to intersection.")
 
 def main():
-    st.title("Chapter 2: Sets & Set Operations")
+    theme.chapter_header("SETS", "Chapter 2: Sets & Set Operations", "Membership, unions, power sets and Venn diagrams — the algebra of collections.")
     tabs = st.tabs(["Overview", "1. Set Basics", "2. Set Operations", "3. Power Sets & Products", "4. Identities & Laws"])
     
     with tabs[0]: render_overview()
