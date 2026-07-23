@@ -10,28 +10,36 @@ theme.setup_page("Discrete Math Bridge", "📚")
 CHAPTERS = [
     ("01", "🔣", "Logic & Proofs",
      "Truth tables, De Morgan's laws, quantifiers and the four proof methods.",
-     "Logic gates · boolean expressions · data validation", theme.INDIGO),
+     "Logic gates · boolean expressions · data validation", theme.INDIGO,
+     "chapter_1_logic.py"),
     ("02", "🧮", "Sets & Set Operations",
      "Membership, unions, power sets and Venn diagrams over finite domains.",
-     "Python sets · SQL JOINs · test generation", theme.TEAL),
+     "Python sets · SQL JOINs · test generation", theme.TEAL,
+     "chapter_2_sets.py"),
     ("03", "🔁", "Induction & Recursion",
      "Weak & strong induction, recursive definitions and solving recurrences.",
-     "Loop invariants · recursion trees · call stacks", theme.INDIGO),
+     "Loop invariants · recursion trees · call stacks", theme.INDIGO,
+     "chapter_3_induction.py"),
     ("04", "🎯", "Functions",
      "Domain/codomain, injective/surjective/bijective, composition and inverses.",
-     "Hash functions · APIs · middleware pipelines", theme.TEAL),
+     "Hash functions · APIs · middleware pipelines", theme.TEAL,
+     "chapter_4_functions.py"),
     ("05", "🎲", "Counting & Combinatorics",
      "Sum/product rules, permutations, pigeonhole and inclusion–exclusion.",
-     "Password strength · birthday paradox · Pascal's triangle", theme.AMBER),
+     "Password strength · birthday paradox · Pascal's triangle", theme.AMBER,
+     "chapter_5_counting.py"),
     ("06", "🔗", "Relations",
      "Digraphs, matrices, composition, equivalence classes and orderings.",
-     "SQL tables · topological sort · clustering", theme.INDIGO),
+     "SQL tables · topological sort · clustering", theme.INDIGO,
+     "chapter_6_relations.py"),
     ("07", "🕸️", "Graph Theory",
      "Degrees, connectivity, BFS/DFS, shortest paths and graph coloring.",
-     "Social networks · routing · exam scheduling", theme.TEAL),
+     "Social networks · routing · exam scheduling", theme.TEAL,
+     "chapter_7_graphs.py"),
     ("08", "🌳", "Trees",
      "Rooted & binary trees, traversals, spanning trees and game trees.",
-     "File systems · MST · Minimax AI", theme.AMBER),
+     "File systems · MST · Minimax AI", theme.AMBER,
+     "chapter_8_trees.py"),
 ]
 
 
@@ -96,8 +104,12 @@ def overview():
     for row in range(0, len(CHAPTERS), 2):
         cols = st.columns(2, gap="medium")
         for col, ch in zip(cols, CHAPTERS[row:row + 2]):
+            num, icon, title, desc, bridge, accent, page_file = ch
             with col:
-                st.markdown(_card(*ch), unsafe_allow_html=True)
+                st.markdown(_card(num, icon, title, desc, bridge, accent),
+                            unsafe_allow_html=True)
+                st.page_link(page_file, label=f"{icon} Open Chapter {num}",
+                             use_container_width=True)
         st.write("")
 
     st.divider()
