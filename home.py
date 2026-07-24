@@ -47,7 +47,7 @@ def _card(num, icon, title, desc, bridge, accent, page_path):
     # Streamlit page URL = script name without .py
     url = "/" + page_path.replace(".py", "")
     return (
-        f'<a href="{url}" style="text-decoration:none;color:inherit;display:block;">'
+        f'<a href="{url}" target="_top" style="text-decoration:none;color:inherit;display:block;">'
         f'<div class="cs-course-card" style="--accent:{accent};cursor:pointer;'
         f'position:relative;overflow:hidden;">'
         f'<div style="position:absolute;top:-10px;right:-10px;font-size:3.5rem;'
