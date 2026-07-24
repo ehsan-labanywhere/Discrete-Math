@@ -406,6 +406,29 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {{
   margin-left: 8px;
   vertical-align: middle;
 }}
+
+/* Card navigation link — merges with card bottom */
+.card-nav + div [data-testid="stPageLink"],
+.card-nav + div [data-testid="stPageLink-nav"] {{
+  margin-top: -12px !important;
+}}
+[data-testid="stPageLink"] a,
+[data-testid="stPageLink-nav"] a {{
+  border: 1px solid var(--cs-border) !important;
+  border-top: 1px dashed var(--cs-border) !important;
+  border-radius: 0 0 var(--cs-r-lg) var(--cs-r-lg) !important;
+  background: var(--cs-surface) !important;
+  padding: 10px 18px !important;
+  font-weight: 600 !important;
+  color: var(--cs-indigo) !important;
+  transition: background .15s ease, color .15s ease !important;
+}}
+[data-testid="stPageLink"] a:hover,
+[data-testid="stPageLink-nav"] a:hover {{
+  background: var(--cs-indigo) !important;
+  color: #fff !important;
+  border-color: var(--cs-indigo) !important;
+}}
 </style>
 """
 

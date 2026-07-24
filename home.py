@@ -43,13 +43,11 @@ CHAPTERS = [
 ]
 
 
-def _card(num, icon, title, desc, bridge, accent, page_path):
-    # Streamlit page URL = script name without .py
-    url = "/" + page_path.replace(".py", "")
+def _card(num, icon, title, desc, bridge, accent):
     return (
-        f'<a href="{url}" target="_top" style="text-decoration:none;color:inherit;display:block;">'
-        f'<div class="cs-course-card" style="--accent:{accent};cursor:pointer;'
-        f'position:relative;overflow:hidden;">'
+        f'<div class="cs-course-card card-nav" style="--accent:{accent};'
+        f'position:relative;overflow:hidden;margin-bottom:0;'
+        f'border-bottom-left-radius:0;border-bottom-right-radius:0;border-bottom:none;">'
         f'<div style="position:absolute;top:-10px;right:-10px;font-size:3.5rem;'
         f'opacity:.06;pointer-events:none;">{icon}</div>'
         f'<div class="num">CHAPTER {num}</div>'
@@ -57,7 +55,7 @@ def _card(num, icon, title, desc, bridge, accent, page_path):
         f'<p>{desc}</p>'
         f'<p style="margin-top:10px;font-family:\'JetBrains Mono\',monospace;'
         f'font-size:.76rem;color:{accent};">↳ {bridge}</p>'
-        f'</div></a>'
+        f'</div>'
     )
 
 
@@ -107,8 +105,14 @@ def overview():
     for row in range(0, len(CHAPTERS), 2):
         cols = st.columns(2, gap="medium")
         for col, ch in zip(cols, CHAPTERS[row:row + 2]):
+            num, icon, title, desc, bridge, accent, page_file = ch
             with col:
-                st.markdown(_card(*ch), unsafe_allow_html=True)
+                st.markdown(_card(num, icon, title, desc, bridge, accent),
+                            unsafe_allow_html=True)
+                st.page_link(page_file,
+                             label=f"→ Open {title}",
+                             icon=icon,
+                             use_container_width=True)
         st.write("")
 
     st.divider()
