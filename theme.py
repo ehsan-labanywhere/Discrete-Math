@@ -407,27 +407,30 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {{
   vertical-align: middle;
 }}
 
-/* Card navigation link — merges with card bottom */
-.card-nav + div [data-testid="stPageLink"],
-.card-nav + div [data-testid="stPageLink-nav"] {{
-  margin-top: -12px !important;
-}}
-[data-testid="stPageLink"] a,
-[data-testid="stPageLink-nav"] a {{
+/* Chapter nav buttons — styled as course cards */
+button[kind="tertiary"][data-testid="stBaseButton-tertiary"] {{
   border: 1px solid var(--cs-border) !important;
-  border-top: 1px dashed var(--cs-border) !important;
-  border-radius: 0 0 var(--cs-r-lg) var(--cs-r-lg) !important;
+  border-top: 3px solid var(--cs-indigo) !important;
+  border-radius: var(--cs-r-lg) !important;
   background: var(--cs-surface) !important;
-  padding: 10px 18px !important;
-  font-weight: 600 !important;
-  color: var(--cs-indigo) !important;
-  transition: background .15s ease, color .15s ease !important;
+  padding: 18px 20px !important;
+  text-align: left !important;
+  white-space: pre-wrap !important;
+  line-height: 1.5 !important;
+  color: var(--cs-ink) !important;
+  font-weight: 500 !important;
+  font-size: .9rem !important;
+  min-height: 140px !important;
+  cursor: pointer !important;
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease !important;
 }}
-[data-testid="stPageLink"] a:hover,
-[data-testid="stPageLink-nav"] a:hover {{
-  background: var(--cs-indigo) !important;
-  color: #fff !important;
-  border-color: var(--cs-indigo) !important;
+button[kind="tertiary"][data-testid="stBaseButton-tertiary"]:hover {{
+  box-shadow: 0 8px 25px rgba(30,41,59,.08) !important;
+  border-color: #C7D2FE !important;
+  border-top-color: var(--cs-indigo) !important;
+  transform: translateY(-2px) !important;
+  background: var(--cs-surface) !important;
+  color: var(--cs-ink) !important;
 }}
 </style>
 """

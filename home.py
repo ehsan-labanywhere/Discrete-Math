@@ -43,21 +43,6 @@ CHAPTERS = [
 ]
 
 
-def _card(num, icon, title, desc, bridge, accent):
-    return (
-        f'<div class="cs-course-card card-nav" style="--accent:{accent};'
-        f'position:relative;overflow:hidden;margin-bottom:0;'
-        f'border-bottom-left-radius:0;border-bottom-right-radius:0;border-bottom:none;">'
-        f'<div style="position:absolute;top:-10px;right:-10px;font-size:3.5rem;'
-        f'opacity:.06;pointer-events:none;">{icon}</div>'
-        f'<div class="num">CHAPTER {num}</div>'
-        f'<h4>{icon}&nbsp; {title}</h4>'
-        f'<p>{desc}</p>'
-        f'<p style="margin-top:10px;font-family:\'JetBrains Mono\',monospace;'
-        f'font-size:.76rem;color:{accent};">↳ {bridge}</p>'
-        f'</div>'
-    )
-
 
 def overview():
     theme.hero(
@@ -107,12 +92,15 @@ def overview():
         for col, ch in zip(cols, CHAPTERS[row:row + 2]):
             num, icon, title, desc, bridge, accent, page_file = ch
             with col:
-                st.markdown(_card(num, icon, title, desc, bridge, accent),
-                            unsafe_allow_html=True)
-                st.page_link(page_file,
-                             label=f"→ Open {title}",
-                             icon=icon,
-                             use_container_width=True)
+                if st.button(
+                    f"{icon}  CHAPTER {num}  ·  {title}\n\n"
+                    f"{desc}\n\n"
+                    f"↳ {bridge}",
+                    key=f"nav_{num}",
+                    use_container_width=True,
+                    type="tertiary",
+                ):
+                    st.switch_page(page_file)
         st.write("")
 
     st.divider()
